@@ -10,8 +10,8 @@ import type {
   SampleQueriesResponse,
 } from "@/types/crypto"
 
-const API_BASE_URL = "/api/v1/crypto"
-const QA_API_BASE_URL = "/api/v1/qa"
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/crypto`
+const QA_API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/qa`
 
 class ApiError extends Error {
   status: number
