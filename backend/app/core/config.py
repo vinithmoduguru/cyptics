@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = 300  # 5 minutes
     
     # CORS settings
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"  # Comma-separated list
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://cryptics-webapp.netlify.app"  # Comma-separated list
     
     @property
     def allowed_origins(self) -> list[str]:
