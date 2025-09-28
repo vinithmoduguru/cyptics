@@ -17,7 +17,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this for production
+    allow_origins=settings.allowed_origins,  # Configure this for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,7 +25,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(crypto.router, prefix="/api/v1/crypto", tags=["Crypto"])
-app.include_router(qa.router, prefix="/api/v1/qa", tags=["Q/A Assistant"])
 app.include_router(qa.router, prefix="/api/v1/qa", tags=["Q&A Assistant"])
 
 

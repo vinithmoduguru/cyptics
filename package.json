@@ -7,9 +7,10 @@
     "dev": "./dev.sh",
     "dev:backend": "cd backend && ./start.sh",
     "dev:frontend": "cd webapp && npm run dev",
-    "install:all": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cd ../webapp && npm install",
+    "install:all": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && pip install -r requirements-dev.txt && cd ../webapp && npm install",
     "build": "cd webapp && npm run build",
     "test": "cd backend && python3 -m pytest",
+    "test:frontend": "cd webapp && npm run test",
     "lint": "cd webapp && npm run lint",
     "clean": "rm -rf backend/venv backend/__pycache__ backend/app/__pycache__ webapp/node_modules webapp/dist"
   },

@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     # Cache settings
     CACHE_TTL_SECONDS: int = 300  # 5 minutes
     
+    # CORS settings
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"  # Comma-separated list
+    
+    @property
+    def allowed_origins(self) -> list[str]:
+        """Parse ALLOWED_ORIGINS into a list."""
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+    
     class Config:
         """Pydantic config."""
         env_file = ".env"

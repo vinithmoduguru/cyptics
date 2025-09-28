@@ -26,7 +26,7 @@ function App() {
           </Routes>
         </div>
       </Router>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       <Toaster />
     </QueryClientProvider>
   )
