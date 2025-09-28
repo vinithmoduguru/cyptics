@@ -1,7 +1,7 @@
 """CoinGecko API service for fetching cryptocurrency data."""
 import asyncio
 import aiohttp
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Any
 from app.core.config import settings
 import logging
@@ -203,6 +203,9 @@ class CoinGeckoService:
         
         for coin in data:
             try:
+                # Ensure datetime fields are naive UTC
+                ath_date = self._parse_date(coin.get("ath_date"))
+                atl_date = self._parse_date(coin.get("atl_date"))
                 transformed_coin = {
                     "id": coin["id"],
                     "symbol": coin["symbol"],
@@ -224,10 +227,10 @@ class CoinGeckoService:
                     "max_supply": coin.get("max_supply"),
                     "ath": coin.get("ath"),
                     "ath_change_percentage": coin.get("ath_change_percentage"),
-                    "ath_date": self._parse_date(coin.get("ath_date")),
+                    "ath_date": ath_date,
                     "atl": coin.get("atl"),
                     "atl_change_percentage": coin.get("atl_change_percentage"),
-                    "atl_date": self._parse_date(coin.get("atl_date")),
+                    "atl_date": atl_date,
                 }
                 transformed.append(transformed_coin)
             except Exception as e:
@@ -288,7 +291,7 @@ class CoinGeckoService:
         transformed = []
         for price_point in prices:
             timestamp_ms, price = price_point
-            timestamp = datetime.fromtimestamp(timestamp_ms / 1000)
+            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).replace(tzinfo=None)
             
             transformed.append({
                 "id": f"{coin_id}_{int(timestamp_ms)}",
@@ -308,7 +311,11 @@ class CoinGeckoService:
         
         try:
             # CoinGecko returns dates in ISO format
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            # Normalize to naive UTC (PostgreSQL column defined as TIMESTAMP WITHOUT TIME ZONE)
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
         except Exception as e:
             logger.warning(f"Could not parse date '{date_str}': {str(e)}")
             return None
