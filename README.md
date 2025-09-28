@@ -1,7 +1,11 @@
-# Cyptics - Crypto Dashboard Development Guide
+# Cyptics - Crypto Dashboard
 
 A full-stack cryptocurrency dashboard application built with FastAPI (backend)
-and React + TypeScript (frontend).
+and React + TypeScript (frontend). Features real-time crypto data, watchlist
+management, and interactive Q&A assistant.
+
+**🚀 Live Demo**: https://cryptics-webapp.netlify.app **📚 API Docs**:
+https://cyptics.onrender.com/docs
 
 ## Quick Start
 
@@ -53,6 +57,14 @@ cd backend
 - 📖 API Docs: http://localhost:8000/docs
 - 🔍 ReDoc: http://localhost:8000/redoc
 - 🏥 Health Check: http://localhost:8000/health
+
+**Production URLs:**
+
+- 🌐 API: https://cyptics.onrender.com/api/v1
+- 📖 API Docs: https://cyptics.onrender.com/docs
+- 🔍 ReDoc: https://cyptics.onrender.com/redoc
+- 🏥 Health Check: https://cyptics.onrender.com/health
+- 🌐 Frontend App: https://cryptics-webapp.netlify.app
 
 ### Frontend Only
 
@@ -109,6 +121,9 @@ cyptics/
 │   │   ├── routes/   # API endpoints
 │   │   ├── schemas/  # Pydantic schemas
 │   │   └── services/ # Business logic
+│   ├── .env          # Environment variables (gitignored)
+│   ├── .env.example  # Example environment variables
+│   ├── .env.template # Environment template
 │   ├── dev.sh        # Development startup script
 │   ├── start.sh      # Production startup script
 │   └── requirements.txt
@@ -118,6 +133,7 @@ cyptics/
 │   │   ├── pages/
 │   │   ├── services/
 │   │   └── types/
+│   ├── .env          # Frontend environment variables
 │   └── package.json
 ├── dev.sh           # Main development script
 └── package.json     # Root package.json
@@ -156,14 +172,50 @@ API_HOST=0.0.0.0
 API_PORT=8000
 DEBUG=True
 
+# Production Database (PostgreSQL)
+# DATABASE_URL=postgresql://username:password@host:port/database
+
 # CoinGecko API (optional)
 # COINGECKO_API_KEY=your_api_key_here
+
+# CORS Origins (comma-separated)
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://cryptics-webapp.netlify.app
+```
+
+### Frontend Environment Variables
+
+The frontend uses environment variables for API configuration:
+
+```bash
+# Frontend Configuration (.env in webapp/)
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+
+# Production API URL
+# VITE_API_BASE_URL=https://cyptics.onrender.com/api/v1
 ```
 
 ### Port Configuration
 
 - **Backend**: Port 8000 (configurable via `API_PORT`)
 - **Frontend**: Port 5173 (Vite default)
+
+## Deployment
+
+### Production URLs
+
+The application is deployed and available at:
+
+- **Frontend**: https://cryptics-webapp.netlify.app
+- **Backend API**: https://cyptics.onrender.com/api/v1
+- **API Documentation**: https://cyptics.onrender.com/docs
+
+### Environment Setup
+
+For production deployment:
+
+1. **Backend**: Configure PostgreSQL database URL in `.env`
+2. **Frontend**: Set `VITE_API_BASE_URL` to production API URL
+3. **CORS**: Update `ALLOWED_ORIGINS` to include production frontend URL
 
 ## Troubleshooting
 
@@ -211,16 +263,13 @@ npm run dev
 
 ## API Integration
 
-The frontend is configured to communicate with the backend API at
-`http://localhost:8000`. The main API service is located in
-`webapp/src/services/api.ts`.
+The frontend is configured to communicate with the backend API. The API base URL
+is configured via environment variables:
 
-## Contributing
+- **Development**: `http://localhost:8000/api/v1`
+- **Production**: `https://cyptics.onrender.com/api/v1`
 
-1. Make sure both servers start without errors
-2. Test your changes in both development and build modes
-3. Run the test suite: `npm run test`
-4. Check linting: `npm run lint`
+The main API service is located in `webapp/src/services/api.ts`.
 
 ---
 
