@@ -32,9 +32,7 @@ import {
   Settings,
   BarChart3,
   Star,
-  Globe,
   Search,
-  LineChart,
   Flame,
   Layers,
   Sun,
@@ -83,7 +81,11 @@ type SparklineProps = {
   className?: string
 }
 
-function Sparkline({ seed, isPositive, className = "h-16 w-full" }: SparklineProps) {
+function Sparkline({
+  seed,
+  isPositive,
+  className = "h-16 w-full",
+}: SparklineProps) {
   const values = useMemo(() => {
     return Array.from({ length: 16 }, (_, index) => {
       const offset = seed * 0.37 + index * 0.9
@@ -126,7 +128,9 @@ function Sparkline({ seed, isPositive, className = "h-16 w-full" }: SparklinePro
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop
             offset="0%"
-            stopColor={isPositive ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"}
+            stopColor={
+              isPositive ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"
+            }
           />
           <stop offset="100%" stopColor="transparent" />
         </linearGradient>
@@ -156,6 +160,7 @@ export default function Dashboard() {
   const [forceRefreshTop10, setForceRefreshTop10] = useState(0)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  console.log(isWatchlistDialogOpen)
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -209,10 +214,7 @@ export default function Dashboard() {
     enabled: watchlistIds.length > 0,
   })
 
-  const topCoins = useMemo(
-    () => top10Cryptos?.coins ?? [],
-    [top10Cryptos]
-  )
+  const topCoins = useMemo(() => top10Cryptos?.coins ?? [], [top10Cryptos])
   const watchlistDisplay = useMemo(
     () => watchlistCryptos ?? [],
     [watchlistCryptos]
@@ -234,7 +236,6 @@ export default function Dashboard() {
   )
 
   const handleWatchlistUpdate = useCallback(() => {
-    setIsWatchlistDialogOpen(false)
     refetchWatchlist()
   }, [refetchWatchlist])
 
@@ -295,40 +296,19 @@ export default function Dashboard() {
     },
     [navigate]
   )
-
   const handleSidebarNavigation = useCallback((sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" })
+      const header = document.querySelector("header.sticky")
+      const headerHeight =
+        header instanceof HTMLElement ? header.offsetHeight : 0
+      const elementTop = element.getBoundingClientRect().top + window.scrollY
+      window.scrollTo({
+        top: elementTop - headerHeight - 8, // 8px extra spacing
+        behavior: "smooth",
+      })
     }
   }, [])
-
-  const quickStats = useMemo(() => {
-    if (!topCoins.length) {
-      const placeholders = [
-        { name: "Bitcoin", symbol: "BTC" },
-        { name: "Ethereum", symbol: "ETH" },
-        { name: "Solana", symbol: "SOL" },
-      ]
-      return placeholders.map((placeholder, index) => ({
-        key: `placeholder-${placeholder.symbol}`,
-        name: placeholder.name,
-        symbol: placeholder.symbol,
-        price: null,
-        percentage: null,
-        seed: index + 1,
-      }))
-    }
-
-    return topCoins.slice(0, 3).map((coin, index) => ({
-      key: coin.id,
-      name: coin.name,
-      symbol: coin.symbol.toUpperCase(),
-      price: coin.current_price,
-      percentage: coin.price_change_percentage_24h,
-      seed: coin.market_cap_rank || index,
-    }))
-  }, [topCoins])
 
   const movers = useMemo(() => {
     if (!topCoins.length) {
@@ -366,37 +346,6 @@ export default function Dashboard() {
 
     return { gainers, losers, volumeLeaders }
   }, [topCoins])
-
-  const marketSummary = useMemo(() => {
-    if (!topCoins.length) {
-      return {
-        totalMarketCap: null,
-        totalVolume: null,
-        btcDominance: null,
-        trackedAssets: top10Cryptos?.total_count ?? 0,
-      }
-    }
-
-    const totalMarketCap = topCoins.reduce(
-      (sum, coin) => sum + (coin.market_cap ?? 0),
-      0
-    )
-    const totalVolume = topCoins.reduce(
-      (sum, coin) => sum + (coin.total_volume ?? 0),
-      0
-    )
-    const btc = topCoins.find((coin) => coin.symbol.toLowerCase() === "btc")
-    const btcDominance = totalMarketCap
-      ? ((btc?.market_cap ?? 0) / totalMarketCap) * 100
-      : null
-
-    return {
-      totalMarketCap,
-      totalVolume,
-      btcDominance,
-      trackedAssets: top10Cryptos?.total_count ?? topCoins.length,
-    }
-  }, [topCoins, top10Cryptos])
 
   const renderTopCoinsTable = useCallback(() => {
     if (isLoadingTop10) {
@@ -502,7 +451,9 @@ export default function Dashboard() {
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-slate-900">{coin.name}</p>
+                        <p className="font-medium text-slate-900">
+                          {coin.name}
+                        </p>
                         <p className="text-xs uppercase text-slate-500">
                           {coin.symbol}
                         </p>
@@ -580,8 +531,8 @@ export default function Dashboard() {
             Build your personal watchlist
           </h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-            Pin your favorite assets to keep an eye on their latest price moves and
-            volume trends right from this dashboard.
+            Pin your favorite assets to keep an eye on their latest price moves
+            and volume trends right from this dashboard.
           </p>
           <Button
             onClick={() => setIsWatchlistDialogOpen(true)}
@@ -617,8 +568,12 @@ export default function Dashboard() {
                     </div>
                   )}
                   <div>
-                    <p className="text-base font-semibold text-slate-900">{coin.name}</p>
-                    <p className="text-xs uppercase text-slate-500">{coin.symbol}</p>
+                    <p className="text-base font-semibold text-slate-900">
+                      {coin.name}
+                    </p>
+                    <p className="text-xs uppercase text-slate-500">
+                      {coin.symbol}
+                    </p>
                   </div>
                 </div>
                 <Badge
@@ -664,14 +619,16 @@ export default function Dashboard() {
                       {formatCurrency(coin.total_volume, { compact: true })}
                     </span>
                   </div>
-                  {coin.high_24h !== undefined && coin.low_24h !== undefined && (
-                    <div className="flex items-center justify-between">
-                      <span>24h range</span>
-                      <span className="font-medium text-slate-900">
-                        {formatCurrency(coin.low_24h)} – {formatCurrency(coin.high_24h)}
-                      </span>
-                    </div>
-                  )}
+                  {coin.high_24h !== undefined &&
+                    coin.low_24h !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span>24h range</span>
+                        <span className="font-medium text-slate-900">
+                          {formatCurrency(coin.low_24h)} –{" "}
+                          {formatCurrency(coin.high_24h)}
+                        </span>
+                      </div>
+                    )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -689,7 +646,9 @@ export default function Dashboard() {
                   size="sm"
                   className="text-xs text-slate-500 hover:text-slate-900"
                   onClick={() =>
-                    setExpandedCoinId((prev) => (prev === coin.id ? null : coin.id))
+                    setExpandedCoinId((prev) =>
+                      prev === coin.id ? null : coin.id
+                    )
                   }>
                   {isExpanded ? "Hide details" : "Quick view"}
                 </Button>
@@ -717,7 +676,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col lg:flex-row">
+      <div className="flex min-h-screen w-full flex-col lg:flex-row">
         <aside className="relative hidden w-64 flex-shrink-0 border-r border-white/60 bg-white/70 px-6 py-10 backdrop-blur lg:flex">
           <div className="sticky top-10 flex h-[calc(100vh-5rem)] flex-col justify-between">
             <div>
@@ -733,7 +692,9 @@ export default function Dashboard() {
                     <Star className="h-4 w-4 text-amber-500" />
                     My Watchlist
                   </span>
-                  <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-600">
+                  <Badge
+                    variant="secondary"
+                    className="rounded-full bg-slate-100 text-slate-600">
                     {totalWatchlist}
                   </Badge>
                 </button>
@@ -743,13 +704,6 @@ export default function Dashboard() {
                   className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-medium text-slate-600 transition hover:bg-slate-100">
                   <Flame className="h-4 w-4 text-rose-500" />
                   Top Movers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSidebarNavigation("market-overview-section")}
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-medium text-slate-600 transition hover:bg-slate-100">
-                  <Globe className="h-4 w-4 text-blue-500" />
-                  Market Overview
                 </button>
                 <button
                   type="button"
@@ -768,7 +722,8 @@ export default function Dashboard() {
                 {lastUpdatedDisplay}
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Auto-refreshes every minute. Manual sync available from the header.
+                Auto-refreshes every minute. Manual sync available from the
+                header.
               </p>
             </div>
           </div>
@@ -782,61 +737,23 @@ export default function Dashboard() {
                   <Sparkles className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-400">
-                    Your crypto command center
-                  </p>
                   <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">
                     Cryptic Dashboard
                   </h1>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-                {quickStats.map((stat) => (
-                  <div
-                    key={stat.key}
-                    className="min-w-[120px] rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm">
-                    <div className="flex items-center justify-between text-xs uppercase text-slate-400">
-                      <span>{stat.symbol}</span>
-                      <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-500">
-                        Live
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-base font-semibold text-slate-900">
-                      {formatCurrency(stat.price ?? undefined)}
-                    </p>
-                    <p
-                      className={`text-xs font-medium ${
-                        stat.percentage === null
-                          ? "text-slate-400"
-                          : (stat.percentage ?? 0) >= 0
-                          ? "text-emerald-600"
-                          : "text-rose-600"
-                      }`}>
-                      {stat.percentage === null
-                        ? "Waiting for data"
-                        : formatPercent(stat.percentage)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
               <div className="flex items-center gap-2 self-start lg:self-auto">
-                <Button variant="ghost" size="icon" className="rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm">
-                  <Sun className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm">
-                  <Moon className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm">
-                  <UserCircle2 className="h-6 w-6" />
-                </Button>
                 <Button
                   variant="outline"
                   className="hidden gap-2 rounded-full border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm md:flex"
                   onClick={() => setForceRefreshTop10((prev) => prev + 1)}
                   disabled={isLoadingTop10}>
-                  <RefreshCw className={`h-4 w-4 ${isLoadingTop10 ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${
+                      isLoadingTop10 ? "animate-spin" : ""
+                    }`}
+                  />
                   Refresh data
                 </Button>
               </div>
@@ -844,47 +761,15 @@ export default function Dashboard() {
           </header>
 
           <main className="space-y-10 px-4 py-8 md:px-8">
-            <section className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
-              <div className="absolute inset-y-0 right-0 h-full w-1/3 bg-gradient-to-l from-blue-100/60 to-transparent" aria-hidden />
-              <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div className="max-w-2xl space-y-4">
-                  <Badge className="bg-slate-900 text-white">Updated {lastUpdatedDisplay}</Badge>
-                  <h2 className="text-3xl font-semibold text-slate-900">
-                    Track, compare, and act without leaving this page
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    Stay on top of the market with curated insights, watchlist performance, and instant answers from your assistant.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-600">
-                  <div className="flex items-center justify-between">
-                    <span>Tracked assets</span>
-                    <span className="font-semibold text-slate-900">
-                      {marketSummary.trackedAssets || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Total market cap</span>
-                    <span className="font-semibold text-slate-900">
-                      {formatCurrency(marketSummary.totalMarketCap ?? undefined, { compact: true })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>BTC dominance</span>
-                    <span className="font-semibold text-slate-900">
-                      {marketSummary.btcDominance
-                        ? `${marketSummary.btcDominance.toFixed(1)}%`
-                        : "—"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section id="search-section" className="relative rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Search the market</h2>
+            <section
+              id="search-section"
+              className="relative rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Search the market
+              </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Type a currency name or ticker to jump straight to its detail view.
+                Type a currency name or ticker to jump straight to its detail
+                view.
               </p>
               <div className="relative mt-5">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400">
@@ -895,21 +780,27 @@ export default function Dashboard() {
                   value={searchQuery}
                   placeholder="Search cryptocurrencies (e.g., Bitcoin, BTC, Ethereum...)"
                   className="h-14 rounded-2xl border-2 border-transparent bg-slate-100 pl-14 text-base shadow-inner transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/30"
-                  onChange={(event) => handleSearchInputChange(event.target.value)}
+                  onChange={(event) =>
+                    handleSearchInputChange(event.target.value)
+                  }
                 />
                 {showSearchResults && (
                   <div className="absolute inset-x-0 top-full z-20 mt-3">
                     <div className="max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
                       <Command className="w-full">
                         {isSearching ? (
-                          <div className="p-5 text-center text-sm text-slate-500">Searching...</div>
+                          <div className="p-5 text-center text-sm text-slate-500">
+                            Searching...
+                          </div>
                         ) : searchResults.length > 0 ? (
                           <div className="divide-y">
                             {searchResults.map((crypto) => (
                               <button
                                 key={crypto.id}
                                 type="button"
-                                onClick={() => handleSearchResultClick(crypto.id)}
+                                onClick={() =>
+                                  handleSearchResultClick(crypto.id)
+                                }
                                 className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-slate-50">
                                 <div className="flex items-center gap-3">
                                   {crypto.image ? (
@@ -924,12 +815,20 @@ export default function Dashboard() {
                                     </div>
                                   )}
                                   <div>
-                                    <p className="font-medium text-slate-900">{crypto.name}</p>
-                                    <p className="text-xs uppercase text-slate-500">{crypto.symbol}</p>
+                                    <p className="font-medium text-slate-900">
+                                      {crypto.name}
+                                    </p>
+                                    <p className="text-xs uppercase text-slate-500">
+                                      {crypto.symbol}
+                                    </p>
                                   </div>
                                 </div>
-                                <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-500">
-                                  {crypto.market_cap_rank ? `#${crypto.market_cap_rank}` : "View"}
+                                <Badge
+                                  variant="secondary"
+                                  className="rounded-full bg-slate-100 text-slate-500">
+                                  {crypto.market_cap_rank
+                                    ? `#${crypto.market_cap_rank}`
+                                    : "View"}
                                 </Badge>
                               </button>
                             ))}
@@ -955,7 +854,9 @@ export default function Dashboard() {
                     <Star className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-900">My Watchlist</h2>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      My Watchlist
+                    </h2>
                     <p className="text-sm text-slate-500">
                       {totalWatchlist
                         ? `${totalWatchlist} assets • Synced locally`
@@ -969,7 +870,11 @@ export default function Dashboard() {
                     onClick={handleRefreshWatchlist}
                     disabled={isLoadingWatchlist}
                     className="gap-2">
-                    <RefreshCw className={`h-4 w-4 ${isLoadingWatchlist ? "animate-spin" : ""}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 ${
+                        isLoadingWatchlist ? "animate-spin" : ""
+                      }`}
+                    />
                     Refresh
                   </Button>
                   <Button
@@ -990,19 +895,25 @@ export default function Dashboard() {
               className="grid gap-4 lg:grid-cols-3">
               <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">Top gainers</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Top gainers
+                  </h3>
                   <Badge className="bg-emerald-100 text-emerald-700">24h</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
                   {movers.gainers.length ? (
                     movers.gainers.map((coin) => (
-                      <div key={coin.id} className="flex items-center justify-between text-sm">
+                      <div
+                        key={coin.id}
+                        className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-xs font-semibold text-emerald-600">
                             {coin.symbol.slice(0, 3).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{coin.name}</p>
+                            <p className="font-medium text-slate-900">
+                              {coin.name}
+                            </p>
                             <p className="text-xs uppercase text-slate-400">
                               {coin.symbol}
                             </p>
@@ -1014,26 +925,34 @@ export default function Dashboard() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500">Awaiting market movers…</p>
+                    <p className="text-sm text-slate-500">
+                      Awaiting market movers…
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">Top losers</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Top losers
+                  </h3>
                   <Badge className="bg-rose-100 text-rose-600">24h</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
                   {movers.losers.length ? (
                     movers.losers.map((coin) => (
-                      <div key={coin.id} className="flex items-center justify-between text-sm">
+                      <div
+                        key={coin.id}
+                        className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-xs font-semibold text-rose-600">
                             {coin.symbol.slice(0, 3).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{coin.name}</p>
+                            <p className="font-medium text-slate-900">
+                              {coin.name}
+                            </p>
                             <p className="text-xs uppercase text-slate-400">
                               {coin.symbol}
                             </p>
@@ -1045,26 +964,34 @@ export default function Dashboard() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500">No significant drops tracked.</p>
+                    <p className="text-sm text-slate-500">
+                      No significant drops tracked.
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">Volume leaders</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Volume leaders
+                  </h3>
                   <Badge className="bg-blue-100 text-blue-600">24h</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
                   {movers.volumeLeaders.length ? (
                     movers.volumeLeaders.map((coin) => (
-                      <div key={coin.id} className="flex items-center justify-between text-sm">
+                      <div
+                        key={coin.id}
+                        className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-600">
                             {coin.symbol.slice(0, 3).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{coin.name}</p>
+                            <p className="font-medium text-slate-900">
+                              {coin.name}
+                            </p>
                             <p className="text-xs uppercase text-slate-400">
                               {coin.symbol}
                             </p>
@@ -1076,75 +1003,13 @@ export default function Dashboard() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500">Volume data on the way.</p>
+                    <p className="text-sm text-slate-500">
+                      Volume data on the way.
+                    </p>
                   )}
                 </div>
               </div>
             </section>
-
-            <section
-              id="market-overview-section"
-              className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
-                <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
-                        <LineChart className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-slate-900">Market overview</h2>
-                        <p className="text-sm text-slate-500">Global market cap, BTC dominance, and total volume trends.</p>
-                      </div>
-                    </div>
-                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                      <div>
-                        <p className="text-xs uppercase text-slate-400">Market cap</p>
-                        <p className="mt-1 text-lg font-semibold text-slate-900">
-                          {formatCurrency(marketSummary.totalMarketCap ?? undefined, { compact: true })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase text-slate-400">BTC dominance</p>
-                        <p className="mt-1 text-lg font-semibold text-slate-900">
-                          {marketSummary.btcDominance
-                            ? `${marketSummary.btcDominance.toFixed(1)}%`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase text-slate-400">Volume 24h</p>
-                        <p className="mt-1 text-lg font-semibold text-slate-900">
-                          {formatCurrency(marketSummary.totalVolume ?? undefined, { compact: true })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex min-h-[200px] flex-1 items-end">
-                    <Sparkline seed={topCoins.length || 5} isPositive className="h-40 w-full" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900">Assistant tips</h3>
-                <ul className="mt-4 space-y-3 text-sm text-slate-600">
-                  <li className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-indigo-500" />
-                    Ask for quick comparisons ("Compare BTC vs ETH volume this week")
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
-                    Chain follow-up questions to refine your insights.
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                    Save coins to the watchlist, then ask the assistant for deeper dives.
-                  </li>
-                </ul>
-              </div>
-            </section>
-
             <section
               id="top-coins-section"
               className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
@@ -1154,8 +1019,12 @@ export default function Dashboard() {
                     <Layers className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-900">Top 10 cryptocurrencies</h2>
-                    <p className="text-sm text-slate-500">Live data from CoinGecko • Auto refreshes every minute</p>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      Top 10 cryptocurrencies
+                    </h2>
+                    <p className="text-sm text-slate-500">
+                      Live data from CoinGecko • Auto refreshes every minute
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -1163,7 +1032,11 @@ export default function Dashboard() {
                   onClick={() => setForceRefreshTop10((prev) => prev + 1)}
                   disabled={isLoadingTop10}
                   className="gap-2">
-                  <RefreshCw className={`h-4 w-4 ${isLoadingTop10 ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${
+                      isLoadingTop10 ? "animate-spin" : ""
+                    }`}
+                  />
                   Refresh now
                 </Button>
               </div>
@@ -1173,12 +1046,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Dialog open={isWatchlistDialogOpen} onOpenChange={setIsWatchlistDialogOpen}>
+      <Dialog
+        open={isWatchlistDialogOpen}
+        onOpenChange={setIsWatchlistDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Manage watchlist</DialogTitle>
             <DialogDescription>
-              Add or remove cryptocurrencies. Changes sync locally to your browser.
+              Add or remove cryptocurrencies. Changes sync locally to your
+              browser.
             </DialogDescription>
           </DialogHeader>
           <WatchlistManager onWatchlistUpdate={handleWatchlistUpdate} />

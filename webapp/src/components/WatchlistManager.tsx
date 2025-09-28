@@ -1,16 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react"
-import { Search, Plus, Trash2, Star, StarOff, Loader2 } from "lucide-react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
+import { Search, Plus, Trash2, Star, StarOff, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Command } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { cryptoApi } from "@/services/api"
@@ -43,18 +35,27 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<CryptocurrencySearch[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddPanelOpen, setIsAddPanelOpen] = useState(false)
   const [loadingOperations, setLoadingOperations] = useState<Set<string>>(
     new Set()
   )
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    if (onWatchlistUpdate) {
-      onWatchlistUpdate()
+    if (isAddPanelOpen) {
+      const timeout = window.setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 10)
+      return () => window.clearTimeout(timeout)
     }
-  }, [watchlist, onWatchlistUpdate])
+    return undefined
+  }, [isAddPanelOpen])
 
   useEffect(() => {
+    if (!isAddPanelOpen) {
+      return
+    }
+
     if (!searchQuery.trim()) {
       setSearchResults([])
       return
@@ -87,7 +88,7 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, isInWatchlist]) // Include memoized isInWatchlist
+  }, [searchQuery, isInWatchlist, isAddPanelOpen])
 
   const handleAddToWatchlist = async (crypto: CryptocurrencySearch) => {
     const operationId = "add-" + crypto.id
@@ -101,12 +102,14 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
         name: crypto.name,
       })
 
-      setSearchResults((prev) => prev.filter((c) => c.id !== crypto.id))
-
-      if (searchResults.length <= 1) {
-        setSearchQuery("")
-        setIsDialogOpen(false)
-      }
+      setSearchResults((prev) => {
+        const next = prev.filter((c) => c.id !== crypto.id)
+        if (next.length === 0) {
+          setSearchQuery("")
+        }
+        return next
+      })
+      onWatchlistUpdate?.()
     } catch (error) {
       console.error("Failed to add to watchlist:", error)
     } finally {
@@ -124,6 +127,7 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
     try {
       setLoadingOperations((prev) => new Set(prev).add(operationId))
       removeFromWatchlist(cryptoId)
+      onWatchlistUpdate?.()
     } catch (error) {
       console.error("Failed to remove from watchlist:", error)
     } finally {
@@ -139,6 +143,7 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
     try {
       setLoadingOperations((prev) => new Set(prev).add("clear-all"))
       clearWatchlist()
+      onWatchlistUpdate?.()
     } catch (error) {
       console.error("Failed to clear watchlist:", error)
     } finally {
@@ -150,6 +155,18 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
     }
   }
 
+  const handleToggleAddPanel = () => {
+    setIsAddPanelOpen((prev) => {
+      const next = !prev
+      if (!next) {
+        setSearchQuery("")
+        setSearchResults([])
+        setIsSearching(false)
+      }
+      return next
+    })
+  }
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -158,103 +175,18 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
           Watchlist ({watchlistCount})
         </CardTitle>
         <div className="flex gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add Cryptocurrency</DialogTitle>
-                <DialogDescription>
-                  Search and add cryptocurrencies to your watchlist
-                </DialogDescription>
-              </DialogHeader>
-              <div className="mt-4">
-                <Command className="rounded-lg border shadow-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search cryptocurrencies..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 border-0 focus:ring-0 shadow-none"
-                    />
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto border-t">
-                    {isSearching ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Searching...
-                        </div>
-                      </div>
-                    ) : searchResults.length === 0 && searchQuery ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No cryptocurrencies found</p>
-                        <p className="text-xs mt-1">
-                          Try a different search term
-                        </p>
-                      </div>
-                    ) : searchQuery.length < 2 ? (
-                      <div className="text-center py-8 text-gray-400">
-                        <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Start typing to search</p>
-                        <p className="text-xs mt-1">
-                          Enter at least 2 characters
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="p-2 space-y-1">
-                        {searchResults.map((crypto) => (
-                          <div
-                            key={crypto.id}
-                            className="flex items-center justify-between p-3 rounded-md hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              {crypto.image && (
-                                <img
-                                  src={crypto.image}
-                                  alt={crypto.name}
-                                  className="w-8 h-8 rounded-full"
-                                  loading="lazy"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">
-                                  {crypto.name}
-                                </div>
-                                <div className="text-xs text-gray-500 uppercase font-mono">
-                                  {crypto.symbol}
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAddToWatchlist(crypto)}
-                              disabled={loadingOperations.has(
-                                "add-" + crypto.id
-                              )}
-                              className="h-8 w-8 p-0">
-                              {loadingOperations.has("add-" + crypto.id) ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Plus className="h-3 w-3" />
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </Command>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleAddPanel}
+            className="gap-2">
+            {isAddPanelOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            {isAddPanelOpen ? "Close" : "Add"}
+          </Button>
 
           {watchlistCount > 0 && (
             <Button
@@ -271,7 +203,106 @@ const WatchlistManager: React.FC<WatchlistManagerProps> = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
+        {isAddPanelOpen && (
+          <div className="rounded-xl border bg-white shadow-sm">
+            <div className="flex items-start justify-between gap-4 border-b p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Add cryptocurrencies
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Search for assets and add them directly to your watchlist.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleAddPanel}
+                className="text-slate-500 hover:text-slate-900">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4 p-4">
+              <Command className="rounded-lg border shadow-inner">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search cryptocurrencies..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="pl-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+
+                <div className="max-h-80 overflow-y-auto border-t bg-white/80">
+                  {isSearching ? (
+                    <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching...
+                    </div>
+                  ) : !searchQuery ? (
+                    <div className="py-8 text-center text-sm text-slate-400">
+                      Start typing to find a cryptocurrency
+                    </div>
+                  ) : searchQuery.length < 2 ? (
+                    <div className="py-8 text-center text-sm text-slate-400">
+                      Enter at least 2 characters to search
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-slate-500">
+                      No cryptocurrencies found for "{searchQuery}"
+                    </div>
+                  ) : (
+                    <div className="space-y-1 p-2">
+                      {searchResults.map((crypto) => (
+                        <div
+                          key={crypto.id}
+                          className="flex items-center justify-between rounded-md p-3 transition hover:bg-slate-50">
+                          <div className="flex items-center gap-3">
+                            {crypto.image ? (
+                              <img
+                                src={crypto.image}
+                                alt={crypto.name}
+                                className="h-8 w-8 rounded-full"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+                                {crypto.symbol.slice(0, 3).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">
+                                {crypto.name}
+                              </p>
+                              <p className="text-xs uppercase text-slate-500">
+                                {crypto.symbol}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAddToWatchlist(crypto)}
+                            disabled={loadingOperations.has("add-" + crypto.id)}
+                            className="h-8 px-3">
+                            {loadingOperations.has("add-" + crypto.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Command>
+            </div>
+          </div>
+        )}
+
         {watchlistCount === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <StarOff className="h-12 w-12 mx-auto mb-4 opacity-50" />
