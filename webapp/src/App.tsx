@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { Toaster } from "@/components/ui/toaster"
 import Dashboard from "./pages/Dashboard"
 import CryptoDetail from "./pages/CryptoDetail"
 
@@ -26,6 +27,7 @@ function App() {
         </div>
       </Router>
       <ReactQueryDevtools initialIsOpen={false} />
+      <Toaster />
     </QueryClientProvider>
   )
 }

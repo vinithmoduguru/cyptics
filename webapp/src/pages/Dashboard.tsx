@@ -8,14 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Command } from "@/components/ui/command"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { WatchlistCard } from "@/components/dashboard/WatchlistCard"
+import { TopCoinsTable } from "@/components/dashboard/TopCoinsTable"
+import { TopMovers } from "@/components/dashboard/TopMovers"
 import {
   Dialog,
   DialogContent,
@@ -27,129 +22,24 @@ import WatchlistManager from "@/components/WatchlistManager"
 import QAAssistant from "@/components/QAAssistant"
 import {
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
   Settings,
   BarChart3,
   Star,
   Search,
   Flame,
   Layers,
-  Sun,
-  Moon,
-  UserCircle2,
   Sparkles,
-  ArrowUpRight,
   MessageSquare,
 } from "lucide-react"
 
-const formatCurrency = (
-  value?: number,
-  options: { compact?: boolean } = {}
-) => {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return "—"
-  }
-
-  const maximumFractionDigits = options.compact
-    ? 2
-    : value < 1
-    ? 4
-    : value < 1000
-    ? 2
-    : 0
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: options.compact ? "compact" : "standard",
-    maximumFractionDigits,
-  }).format(value)
-}
-
-const formatPercent = (value?: number | null) => {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return "—"
-  }
-
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`
-}
-
-type SparklineProps = {
-  seed: number
-  isPositive: boolean
-  className?: string
-}
-
-function Sparkline({
-  seed,
-  isPositive,
-  className = "h-16 w-full",
-}: SparklineProps) {
-  const values = useMemo(() => {
-    return Array.from({ length: 16 }, (_, index) => {
-      const offset = seed * 0.37 + index * 0.9
-      const wave = Math.sin(offset) + Math.cos(seed * 0.15 + index * 0.6)
-      const baseline = isPositive ? 0.58 : 0.42
-      const amplitude = isPositive ? 0.18 : 0.14
-      const normalized = baseline + wave * amplitude * 0.25
-      return Math.max(0.08, Math.min(0.92, normalized))
-    })
-  }, [seed, isPositive])
-
-  const gradientId = `sparkline-${seed}-${isPositive ? "up" : "down"}`
-
-  const areaPoints = [
-    "0,100",
-    ...values.map((value, index) => {
-      const x = (index / (values.length - 1)) * 100
-      const y = (1 - value) * 100
-      return `${x},${y}`
-    }),
-    "100,100",
-  ].join(" ")
-
-  const linePoints = values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * 100
-      const y = (1 - value) * 100
-      return `${x},${y}`
-    })
-    .join(" ")
-
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      className={className}
-      preserveAspectRatio="none"
-      role="img"
-      aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop
-            offset="0%"
-            stopColor={
-              isPositive ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"
-            }
-          />
-          <stop offset="100%" stopColor="transparent" />
-        </linearGradient>
-      </defs>
-      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
-      <polyline
-        points={linePoints}
-        fill="none"
-        stroke={isPositive ? "#22c55e" : "#ef4444"}
-        strokeWidth={2.8}
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { getWatchlistIds } = useWatchlist()
+  const {
+    getWatchlistIds,
+    addToWatchlist,
+    removeFromWatchlist,
+    isInWatchlist,
+  } = useWatchlist()
   const [isWatchlistDialogOpen, setIsWatchlistDialogOpen] = useState(false)
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   const [expandedCoinId, setExpandedCoinId] = useState<string | null>(null)
@@ -160,7 +50,6 @@ export default function Dashboard() {
   const [forceRefreshTop10, setForceRefreshTop10] = useState(0)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  console.log(isWatchlistDialogOpen)
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -215,10 +104,12 @@ export default function Dashboard() {
   })
 
   const topCoins = useMemo(() => top10Cryptos?.coins ?? [], [top10Cryptos])
-  const watchlistDisplay = useMemo(
-    () => watchlistCryptos ?? [],
-    [watchlistCryptos]
-  )
+  const watchlistDisplay = useMemo(() => {
+    if (watchlistIds.length === 0) {
+      return []
+    }
+    return watchlistCryptos ?? []
+  }, [watchlistCryptos, watchlistIds])
   const totalWatchlist = watchlistDisplay.length || watchlistIds.length
   const emptyWatchlist = !isLoadingWatchlist && watchlistDisplay.length === 0
   const lastUpdatedDisplay = topCoins[0]?.last_updated
@@ -242,6 +133,22 @@ export default function Dashboard() {
   const handleRefreshWatchlist = useCallback(() => {
     refetchWatchlist()
   }, [refetchWatchlist])
+
+  const handleAddToWatchlist = useCallback(
+    (coin: { id: string; symbol: string; name: string }) => {
+      addToWatchlist(coin)
+      refetchWatchlist()
+    },
+    [addToWatchlist, refetchWatchlist]
+  )
+
+  const handleRemoveFromWatchlist = useCallback(
+    (cryptoId: string) => {
+      removeFromWatchlist(cryptoId)
+      refetchWatchlist()
+    },
+    [removeFromWatchlist, refetchWatchlist]
+  )
 
   const handleSearch = useCallback(async (value: string) => {
     const trimmed = value.trim()
@@ -346,333 +253,6 @@ export default function Dashboard() {
 
     return { gainers, losers, volumeLeaders }
   }, [topCoins])
-
-  const renderTopCoinsTable = useCallback(() => {
-    if (isLoadingTop10) {
-      return (
-        <div className="rounded-2xl border border-slate-200 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Coin</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">24h</TableHead>
-                <TableHead className="text-right">Market Cap</TableHead>
-                <TableHead className="text-right">Volume</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 6 }).map((_, index) => (
-                <TableRow key={`top-loading-${index}`}>
-                  <TableCell>
-                    <div className="h-3.5 w-8 animate-pulse rounded bg-slate-200" />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200" />
-                      <div className="space-y-1">
-                        <div className="h-3.5 w-24 animate-pulse rounded bg-slate-200" />
-                        <div className="h-3 w-12 animate-pulse rounded bg-slate-200" />
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="ml-auto h-3.5 w-16 animate-pulse rounded bg-slate-200" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="ml-auto h-3.5 w-20 animate-pulse rounded bg-slate-200" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="ml-auto h-3.5 w-24 animate-pulse rounded bg-slate-200" />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="ml-auto h-3.5 w-20 animate-pulse rounded bg-slate-200" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )
-    }
-
-    if (top10Error) {
-      return (
-        <div className="rounded-2xl border border-red-200 bg-red-50/80 p-6 text-sm text-red-700">
-          Could not load top cryptocurrencies: {top10Error.message}
-        </div>
-      )
-    }
-
-    if (!topCoins.length) {
-      return (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-12 text-center text-slate-500">
-          No cryptocurrency data available right now. Try refreshing shortly.
-        </div>
-      )
-    }
-
-    return (
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="w-10">#</TableHead>
-              <TableHead>Coin</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">24h Change</TableHead>
-              <TableHead className="text-right">Market Cap</TableHead>
-              <TableHead className="text-right">Volume (24h)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {topCoins.map((coin) => {
-              const isPositive = (coin.price_change_percentage_24h ?? 0) >= 0
-              return (
-                <TableRow
-                  key={coin.id}
-                  className="cursor-pointer transition hover:bg-slate-50"
-                  onClick={() => handleCryptoClick(coin.id)}>
-                  <TableCell className="font-medium">
-                    {coin.market_cap_rank ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {coin.image ? (
-                        <img
-                          src={coin.image}
-                          alt={coin.name}
-                          className="h-8 w-8 rounded-full"
-                        />
-                      ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-                          {coin.symbol.slice(0, 3).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {coin.name}
-                        </p>
-                        <p className="text-xs uppercase text-slate-500">
-                          {coin.symbol}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm text-slate-700">
-                    {formatCurrency(coin.current_price)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge
-                      className={`inline-flex items-center gap-1 border-none text-xs font-medium ${
-                        isPositive
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-rose-100 text-rose-700"
-                      }`}>
-                      {isPositive ? (
-                        <TrendingUp className="h-3.5 w-3.5" />
-                      ) : (
-                        <TrendingDown className="h-3.5 w-3.5" />
-                      )}
-                      {formatPercent(coin.price_change_percentage_24h)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm text-slate-700">
-                    {formatCurrency(coin.market_cap, { compact: true })}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm text-slate-700">
-                    {formatCurrency(coin.total_volume, { compact: true })}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    )
-  }, [handleCryptoClick, isLoadingTop10, topCoins, top10Error])
-
-  const renderWatchlistContent = useCallback(() => {
-    if (isLoadingWatchlist) {
-      return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={`watchlist-loading-${index}`}
-              className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 animate-pulse rounded-full bg-slate-200" />
-                <div className="space-y-2">
-                  <div className="h-3.5 w-24 animate-pulse rounded bg-slate-200" />
-                  <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
-                </div>
-              </div>
-              <div className="mt-4 h-16 animate-pulse rounded bg-slate-100" />
-            </div>
-          ))}
-        </div>
-      )
-    }
-
-    if (watchlistError) {
-      return (
-        <div className="rounded-2xl border border-red-200 bg-red-50/80 p-6 text-sm text-red-700">
-          Watchlist unavailable right now: {watchlistError.message}
-        </div>
-      )
-    }
-
-    if (emptyWatchlist) {
-      return (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-12 text-center">
-          <BarChart3 className="mx-auto h-12 w-12 text-slate-300" />
-          <h3 className="mt-4 text-lg font-semibold text-slate-900">
-            Build your personal watchlist
-          </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-            Pin your favorite assets to keep an eye on their latest price moves
-            and volume trends right from this dashboard.
-          </p>
-          <Button
-            onClick={() => setIsWatchlistDialogOpen(true)}
-            className="mt-6 gap-2">
-            <Settings className="h-4 w-4" />
-            Manage watchlist
-          </Button>
-        </div>
-      )
-    }
-
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {watchlistDisplay.map((coin) => {
-          const isPositive = (coin.price_change_percentage_24h ?? 0) >= 0
-          const isExpanded = expandedCoinId === coin.id
-
-          return (
-            <div
-              key={coin.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {coin.image ? (
-                    <img
-                      src={coin.image}
-                      alt={coin.name}
-                      className="h-12 w-12 rounded-full"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-500">
-                      {coin.symbol.slice(0, 3).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">
-                      {coin.name}
-                    </p>
-                    <p className="text-xs uppercase text-slate-500">
-                      {coin.symbol}
-                    </p>
-                  </div>
-                </div>
-                <Badge
-                  className={`inline-flex items-center gap-1 border-none text-xs ${
-                    isPositive
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-rose-100 text-rose-700"
-                  }`}>
-                  {isPositive ? (
-                    <TrendingUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <TrendingDown className="h-3.5 w-3.5" />
-                  )}
-                  {formatPercent(coin.price_change_percentage_24h)}
-                </Badge>
-              </div>
-
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm text-slate-500">
-                  <span>Price</span>
-                  <span className="font-medium text-slate-900">
-                    {formatCurrency(coin.current_price)}
-                  </span>
-                </div>
-                <Sparkline
-                  seed={coin.market_cap_rank ?? coin.current_price ?? 1}
-                  isPositive={isPositive}
-                  className="mt-3 h-20 w-full"
-                />
-              </div>
-
-              {isExpanded ? (
-                <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-                  <div className="flex items-center justify-between">
-                    <span>Market cap</span>
-                    <span className="font-medium text-slate-900">
-                      {formatCurrency(coin.market_cap, { compact: true })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>24h volume</span>
-                    <span className="font-medium text-slate-900">
-                      {formatCurrency(coin.total_volume, { compact: true })}
-                    </span>
-                  </div>
-                  {coin.high_24h !== undefined &&
-                    coin.low_24h !== undefined && (
-                      <div className="flex items-center justify-between">
-                        <span>24h range</span>
-                        <span className="font-medium text-slate-900">
-                          {formatCurrency(coin.low_24h)} –{" "}
-                          {formatCurrency(coin.high_24h)}
-                        </span>
-                      </div>
-                    )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-full gap-2"
-                    onClick={() => handleCryptoClick(coin.id)}>
-                    View details
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
-
-              <div className="mt-4 flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-slate-500 hover:text-slate-900"
-                  onClick={() =>
-                    setExpandedCoinId((prev) =>
-                      prev === coin.id ? null : coin.id
-                    )
-                  }>
-                  {isExpanded ? "Hide details" : "Quick view"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-slate-500 hover:text-slate-900"
-                  onClick={() => handleCryptoClick(coin.id)}>
-                  Open asset
-                </Button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }, [
-    emptyWatchlist,
-    expandedCoinId,
-    handleCryptoClick,
-    isLoadingWatchlist,
-    watchlistDisplay,
-    watchlistError,
-  ])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -887,129 +467,69 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="mt-6">{renderWatchlistContent()}</div>
-            </section>
-
-            <section
-              id="top-movers-section"
-              className="grid gap-4 lg:grid-cols-3">
-              <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Top gainers
-                  </h3>
-                  <Badge className="bg-emerald-100 text-emerald-700">24h</Badge>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {movers.gainers.length ? (
-                    movers.gainers.map((coin) => (
+              <div className="mt-6">
+                {isLoadingWatchlist ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {Array.from({ length: 3 }).map((_, index) => (
                       <div
-                        key={coin.id}
-                        className="flex items-center justify-between text-sm">
+                        key={`watchlist-loading-${index}`}
+                        className="rounded-2xl border border-slate-200 bg-white/70 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-xs font-semibold text-emerald-600">
-                            {coin.symbol.slice(0, 3).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {coin.name}
-                            </p>
-                            <p className="text-xs uppercase text-slate-400">
-                              {coin.symbol}
-                            </p>
+                          <div className="h-12 w-12 animate-pulse rounded-full bg-slate-200" />
+                          <div className="space-y-2">
+                            <div className="h-3.5 w-24 animate-pulse rounded bg-slate-200" />
+                            <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
                           </div>
                         </div>
-                        <span className="font-semibold text-emerald-600">
-                          {formatPercent(coin.price_change_percentage_24h)}
-                        </span>
+                        <div className="mt-4 h-16 animate-pulse rounded bg-slate-100" />
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Awaiting market movers…
+                    ))}
+                  </div>
+                ) : watchlistError ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50/80 p-6 text-sm text-red-700">
+                    Watchlist unavailable right now:{" "}
+                    {watchlistError instanceof Error
+                      ? watchlistError.message
+                      : "Unable to load watchlist"}
+                  </div>
+                ) : emptyWatchlist ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-12 text-center">
+                    <BarChart3 className="mx-auto h-12 w-12 text-slate-300" />
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">
+                      Build your personal watchlist
+                    </h3>
+                    <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                      Pin your favorite assets to keep an eye on their latest
+                      price moves and volume trends right from this dashboard.
                     </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Top losers
-                  </h3>
-                  <Badge className="bg-rose-100 text-rose-600">24h</Badge>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {movers.losers.length ? (
-                    movers.losers.map((coin) => (
-                      <div
+                    <Button
+                      onClick={() => setIsWatchlistDialogOpen(true)}
+                      className="mt-6 gap-2">
+                      <Settings className="h-4 w-4" />
+                      Manage watchlist
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {watchlistDisplay.map((coin) => (
+                      <WatchlistCard
                         key={coin.id}
-                        className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-xs font-semibold text-rose-600">
-                            {coin.symbol.slice(0, 3).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {coin.name}
-                            </p>
-                            <p className="text-xs uppercase text-slate-400">
-                              {coin.symbol}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="font-semibold text-rose-600">
-                          {formatPercent(coin.price_change_percentage_24h)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      No significant drops tracked.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/60 bg-white/90 p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Volume leaders
-                  </h3>
-                  <Badge className="bg-blue-100 text-blue-600">24h</Badge>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {movers.volumeLeaders.length ? (
-                    movers.volumeLeaders.map((coin) => (
-                      <div
-                        key={coin.id}
-                        className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-600">
-                            {coin.symbol.slice(0, 3).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {coin.name}
-                            </p>
-                            <p className="text-xs uppercase text-slate-400">
-                              {coin.symbol}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="font-semibold text-blue-600">
-                          {formatCurrency(coin.total_volume, { compact: true })}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Volume data on the way.
-                    </p>
-                  )}
-                </div>
+                        coin={coin}
+                        isExpanded={expandedCoinId === coin.id}
+                        onToggle={(coinId) =>
+                          setExpandedCoinId((prev) =>
+                            prev === coinId ? null : coinId
+                          )
+                        }
+                        onOpenAsset={handleCryptoClick}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
+
+            <TopMovers movers={movers} />
             <section
               id="top-coins-section"
               className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-sm">
@@ -1040,7 +560,17 @@ export default function Dashboard() {
                   Refresh now
                 </Button>
               </div>
-              <div className="mt-6">{renderTopCoinsTable()}</div>
+              <div className="mt-6">
+                <TopCoinsTable
+                  coins={topCoins}
+                  isLoading={isLoadingTop10}
+                  error={top10Error}
+                  onSelectCoin={handleCryptoClick}
+                  isInWatchlist={isInWatchlist}
+                  onAddToWatchlist={handleAddToWatchlist}
+                  onRemoveFromWatchlist={handleRemoveFromWatchlist}
+                />
+              </div>
             </section>
           </main>
         </div>

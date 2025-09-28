@@ -6,7 +6,6 @@ import type {
   WatchlistResponse,
   WatchlistAddRequest,
   WatchlistOperationResponse,
-  QAQueryRequest,
   QAResponse,
   SampleQueriesResponse,
 } from "@/types/crypto"

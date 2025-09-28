@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useParams, useNavigate } from "react-router-dom"
 import { cryptoApi } from "@/services/api"
 import { formatChartDate, formatTooltipDate } from "@/lib/dateUtils"
+import { useWatchlist } from "@/hooks/useWatchlist"
+import { WatchlistToggle } from "@/components/dashboard/WatchlistToggle"
 import {
   Card,
   CardContent,
@@ -63,6 +65,7 @@ export default function CryptoDetail() {
   const { cryptoId } = useParams<{ cryptoId: string }>()
   const navigate = useNavigate()
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist()
 
   // Fetch live crypto data every 30 seconds
   const {
@@ -110,6 +113,22 @@ export default function CryptoDetail() {
         formatted_date: formatTooltipDate(item.timestamp),
       })
     ) || []
+
+  const inWatchlist = crypto ? isInWatchlist(crypto.id) : false
+
+  const handleToggleWatchlist = () => {
+    if (!crypto) return
+
+    if (inWatchlist) {
+      removeFromWatchlist(crypto.id)
+    } else {
+      addToWatchlist({
+        id: crypto.id,
+        symbol: crypto.symbol,
+        name: crypto.name,
+      })
+    }
+  }
 
   if (cryptoLoading) {
     return (
@@ -167,10 +186,18 @@ export default function CryptoDetail() {
             Live • Updates every 30s
           </Badge>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <WatchlistToggle
+            variant="button"
+            isActive={inWatchlist}
+            onToggle={handleToggleWatchlist}
+            className="whitespace-nowrap"
+          />
+        </div>
       </div>
 
       {/* Live Price Card */}
