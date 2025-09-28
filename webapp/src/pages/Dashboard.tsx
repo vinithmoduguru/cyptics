@@ -11,18 +11,10 @@ import { Command } from "@/components/ui/command"
 import { WatchlistCard } from "@/components/dashboard/WatchlistCard"
 import { TopCoinsTable } from "@/components/dashboard/TopCoinsTable"
 import { TopMovers } from "@/components/dashboard/TopMovers"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import WatchlistManager from "@/components/WatchlistManager"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import QAAssistant from "@/components/QAAssistant"
 import {
   RefreshCw,
-  Settings,
   BarChart3,
   Star,
   Search,
@@ -40,7 +32,6 @@ export default function Dashboard() {
     removeFromWatchlist,
     isInWatchlist,
   } = useWatchlist()
-  const [isWatchlistDialogOpen, setIsWatchlistDialogOpen] = useState(false)
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   const [expandedCoinId, setExpandedCoinId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -125,10 +116,6 @@ export default function Dashboard() {
     },
     [navigate]
   )
-
-  const handleWatchlistUpdate = useCallback(() => {
-    refetchWatchlist()
-  }, [refetchWatchlist])
 
   const handleRefreshWatchlist = useCallback(() => {
     refetchWatchlist()
@@ -457,13 +444,6 @@ export default function Dashboard() {
                     />
                     Refresh
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setIsWatchlistDialogOpen(true)}>
-                    <Settings className="h-4 w-4" />
-                    Manage watchlist
-                  </Button>
                 </div>
               </div>
 
@@ -502,12 +482,6 @@ export default function Dashboard() {
                       Pin your favorite assets to keep an eye on their latest
                       price moves and volume trends right from this dashboard.
                     </p>
-                    <Button
-                      onClick={() => setIsWatchlistDialogOpen(true)}
-                      className="mt-6 gap-2">
-                      <Settings className="h-4 w-4" />
-                      Manage watchlist
-                    </Button>
                   </div>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -575,21 +549,6 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
-
-      <Dialog
-        open={isWatchlistDialogOpen}
-        onOpenChange={setIsWatchlistDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Manage watchlist</DialogTitle>
-            <DialogDescription>
-              Add or remove cryptocurrencies. Changes sync locally to your
-              browser.
-            </DialogDescription>
-          </DialogHeader>
-          <WatchlistManager onWatchlistUpdate={handleWatchlistUpdate} />
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isAssistantOpen} onOpenChange={setIsAssistantOpen}>
         <DialogContent className="max-w-4xl overflow-hidden border-0 bg-white p-0">
